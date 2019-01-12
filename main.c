@@ -135,11 +135,59 @@ fail:
 
 void decrypt(char *in_path, char *out_path)
 {
+    FILE *in, *out;
+    if (!(in = fopen(in_path, "rb")) || !(out = fopen(out_path, "w+"))) {
+        fprintf(stderr, "File error\n");
+        return;
+    }
+    uint32_t bmp_size, bmp_offset;
+    if (!get_bmp_header(in, &bmp_size, &bmp_offset)) {
+        fprintf(stderr, "Invalid file format. Use BMP only files");
+        fclose(in);
+        fclose(out);
+        return;
+    }
+    fseek(in, bmp_offset, SEEK_SET);
+    // Read 32 bit size;
+    uint8_t size_buff[24];
+    fread(size_buff, 1, 24, in);
+    for (int i = 0; i < 24; ++i) {
+        size_buff[i] &= 1u;
+    }
+    uint32_t data_size = form_num(1, size_buff) | ((uint32_t)form_num(1, size_buff + 8) << 8) |
+            ((uint32_t)form_num(1, size_buff + 16)) << 16;
+    printf("%d", data_size);
+    uint8_t buff[BUFF_SIZE];
+    uint8_t out_buff[BUFF_SIZE];
+    uint8_t bits_arr[8];
+    uint64_t stego_read;
+    int data_ready = 0;
+    int bit_index = 0;
+    uint32_t j = 0;
+    for (uint32_t i = 0; i < data_size * 8 / BUFF_SIZE + 1; ++i) {
+        stego_read = fread(buff, 1, BUFF_SIZE, in);
+        for (uint64_t i = 0; i < stego_read && j++ < data_size * 8; ++i) {
+            bits_arr[bit_index++] = buff[i] & 1u;
+            if (bit_index == 8) {
+                bit_index = 0;
+                if (data_ready == BUFF_SIZE) {
+                    data_ready = 0;
+                    fwrite(out_buff, 1, BUFF_SIZE, out);
+                } else {
+                    out_buff[data_ready++] = form_num(1, bits_arr);
+                }
+            }
+        }
+    }
+    fwrite(out_buff, 1, data_ready, out);
+    fclose(in);
+    fclose(out);
 }
 
 int main(int argc, char *argv[])
 {
     encrypt("test.bmp", "data.bin", "out.bmp");
+    decrypt("out.bmp", "decrypt.data");
     /*
     if (is_encrypt(argc, argv)) {
         encrypt(argv[2], argv[3], "out.bmp");
