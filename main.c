@@ -87,9 +87,9 @@ void encrypt(char *in_path, char *data_path, char *out_path)
     free(headers_buff);
     // Write file size
     uint8_t size_parts[3];
-    size_parts[0] = (file_size & 0xFF);
-    size_parts[1]= (file_size & 0xFF00) >> 2;
-    size_parts[2] = (file_size & 0xFF0000) >> 4;
+    size_parts[0] = (file_size & 0xFFu);
+    size_parts[1]= (file_size & 0xFF00u) >> 8;
+    size_parts[2] = (file_size & 0xFF0000u) >> 16;
     uint8_t bits_arr[8];
     uint8_t buff[BUFF_SIZE];
     fread(buff, 1, 24, in);
@@ -173,9 +173,10 @@ void decrypt(char *in_path, char *out_path)
                 if (data_ready == BUFF_SIZE) {
                     data_ready = 0;
                     fwrite(out_buff, 1, BUFF_SIZE, out);
-                } else {
+                } /*else {
                     out_buff[data_ready++] = form_num(1, bits_arr);
-                }
+                } */
+                out_buff[data_ready++] = form_num(1, bits_arr);
             }
         }
     }
