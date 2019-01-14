@@ -6,18 +6,18 @@
 
 #define BUFF_SIZE 512
 
-typedef enum {
-    err_nop, err_data_file, err_cont_file, err_filetype, err_big_size
-} stego_err;
-
 bool is_encrypt(int argc, char *argv[])
 {
-    return (argc == 4) && !strcmp(argv[1], "-e");
+    if (argc != 4 && argc != 5)
+        return false;
+    return !strcmp(argv[1], "-e");
 }
 
 bool is_decrypt(int argc, char *argv[])
 {
-    return (argc == 3) && !strcmp(argv[1], "-d");
+    if (argc != 3 && argc != 4)
+        return false;
+    return !strcmp(argv[1], "-d");
 }
 
 uint32_t get_file_size(FILE* f)
@@ -70,13 +70,13 @@ void encrypt(char *in_path, char *data_path, char *out_path)
         return;
     }
     if (!get_bmp_header(in, &bmp_size, &bmp_offset)) {
-        fprintf(stderr, "Invalid file format. Use BMP only files");
+        fprintf(stderr, "Invalid file format. Use BMP only files\n");
         goto fail;
     }
     uint32_t file_size = get_file_size(data);
     // modification!!
     if (file_size > bmp_size / 8) {
-        fprintf(stderr, "To many data... Max size: %d bytes", bmp_size / 8);
+        fprintf(stderr, "To many data... Max size: %d bytes\n", bmp_size / 8);
         goto fail;
     }
     // Write headers.
@@ -142,7 +142,7 @@ void decrypt(char *in_path, char *out_path)
     }
     uint32_t bmp_size, bmp_offset;
     if (!get_bmp_header(in, &bmp_size, &bmp_offset)) {
-        fprintf(stderr, "Invalid file format. Use BMP only files");
+        fprintf(stderr, "Invalid file format. Use BMP only files\n");
         fclose(in);
         fclose(out);
         return;
@@ -156,7 +156,6 @@ void decrypt(char *in_path, char *out_path)
     }
     uint32_t data_size = form_num(1, size_buff) | ((uint32_t)form_num(1, size_buff + 8) << 8) |
             ((uint32_t)form_num(1, size_buff + 16)) << 16;
-    printf("%d", data_size);
     uint8_t buff[BUFF_SIZE];
     uint8_t out_buff[BUFF_SIZE];
     uint8_t bits_arr[8];
@@ -173,9 +172,7 @@ void decrypt(char *in_path, char *out_path)
                 if (data_ready == BUFF_SIZE) {
                     data_ready = 0;
                     fwrite(out_buff, 1, BUFF_SIZE, out);
-                } /*else {
-                    out_buff[data_ready++] = form_num(1, bits_arr);
-                } */
+                }
                 out_buff[data_ready++] = form_num(1, bits_arr);
             }
         }
@@ -187,16 +184,12 @@ void decrypt(char *in_path, char *out_path)
 
 int main(int argc, char *argv[])
 {
-    encrypt("test.bmp", "data.bin", "out.bmp");
-    decrypt("out.bmp", "decrypt.data");
-    /*
     if (is_encrypt(argc, argv)) {
-        encrypt(argv[2], argv[3], "out.bmp");
+        encrypt(argv[2], argv[3], argc == 5 ? argv[4] : "out.bmp");
     } else if (is_decrypt(argc, argv)) {
-        decrypt(argv[2], "out.bin");
+        decrypt(argv[2], argc == 4 ? argv[3] : "out_data.bin");
     } else {
         fprintf(stderr, "Undefined par's\n");
         return 1;
     }
-   */
 }
